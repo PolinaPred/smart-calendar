@@ -16,13 +16,12 @@ function hasSpace(daySlots, startTime, duration){
     const endTime = addMinutes(startTime, duration * 60);
     
     for (let slot of daySlots){
-        const slotStart = parseISO(slot.start);
-        const slotEnd = parseISO(slot.end);
-        if(
-            (isBefore(startTime, slotEnd) && isBefore(slotStart, endTime))
-        ){
-            return false;
-        }
+        const slotStart = new Date(slot.start);
+        const slotEnd = new Date(slot.end);
+
+        const overlaps = startTime <slotEnd && endTime > slotStart;
+
+        if(overlaps)return false; 
     }
     return true;
 }
@@ -89,29 +88,30 @@ function expandRepeatingTasks(tasks){
 
 function insertFlexible(task, weekGrid){
     const durationMins = task.duration * 60;
+    const now = new Date();
 
-    for (let day of DAYS){
-        let startHour = START_HOUR;
-        while (startHour + task.duration <= END_HOUR) {
-            const now = new Date();
-            const testTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour);
-            const currentDayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
-            const targetDayIndex = DAYS.indexOf(day);
-            const daysUntil = (targetDayIndex - currentDayIndex + 7) % 7;
-            
-            testTime.setDate(now.getDate() + daysUntil);
+    for (let i = 0; i < 7; i++){
+        const testDate = new Date(now);
+        testDate.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1) + i);
+        testDate.setHours(START_HOUR, 0,0,0);
 
-            if (hasSpace(weekGrid[day], testTime, task.duration)){
-                const end = addMinutes(testTime, durationMins);
+        const latestStart = new Date(testDate);
+        latestStart.setHours(END_HOUR, 0, 0, 0);
+        latestStart.setTime(latestStart.getTime() - durationMins * 60 * 1000);
+        
+        while (testDate <= latestStart) {
+            const day = DAYS[(testDate.getDay() + 6) % 7];
+
+            if (hasSpace(weekGrid[day], testDate, task.duration)){
+                const end = addMinutes(testDate, durationMins);
                 weekGrid[day].push({
-                    start: testTime.toISOString(),
+                    start: testDate.toISOString(),
                     end: end.toISOString(),
                     task
                 });
                 return;
             }
-
-            startHour += 1;
+            testDate.setMinutes(testDate.getMinutes() + 15);
         }
     }
 }
@@ -121,11 +121,6 @@ export function generateWeekSchedule(tasks) {
     const expandedTasks = expandRepeatingTasks(tasks);
 
     for (let task of expandedTasks){
-        if(!task || (task.locked && (!task.scheduledAt || isNaN(new Date(task.scheduledAt))))){
-            console.warn("Invalid scheduledAt value for task:", task);
-            continue;
-        }
-        
         if(task.locked && task.scheduledAt){
             const date = new Date(task.scheduledAt);
             const day = DAYS[(date.getDay() + 6) % 7];
