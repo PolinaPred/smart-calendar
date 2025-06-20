@@ -1,4 +1,6 @@
 import './ScheduleGrid.css';
+import { generateWeekSchedule } from '../utils/scheduler';
+import {format} from 'date-fns';
 
 const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
@@ -26,6 +28,32 @@ function getHourFromDate(dateString){
 }
 
 export default function ScheduleGrid({ tasks }){
+    const schedule = generateWeekSchedule(tasks);
+    
+    if (!schedule || Object.keys(schedule).length === 0){
+        return <p style={{ textAlign: 'center', marginTop: '2rem'}}>No tasks to display.</p>;
+    }
+    console.log("Schedule passed to grid:", schedule);
+
+    return (
+        <div className="schedule-grid">
+            {Object.entries(schedule).map(([day, slots])=>(
+                <div key={day} className="day-column">
+                    <h3>{day}</h3>
+                    {slots.map(({task, start, end}) => (
+                        <div key={`${task.id}-${start}`} className={`task-block ${task.locked ? 'Stone' : 'Sand'}`}>
+                            <strong>{task.title}</strong><br />
+                            <span>{format(new Date(start), "HH:mm")} - {format(new Date(end), "HH:mm")}</span>
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+
+
+
+    /*
     const {minHour, maxHour} = getScheduledHourRange(tasks);
     const hours = Array.from({length: maxHour-minHour + 1}, (_, i) => i + minHour);
     return (
@@ -63,4 +91,5 @@ export default function ScheduleGrid({ tasks }){
             ))}
         </div>
     );
+    */
 }
