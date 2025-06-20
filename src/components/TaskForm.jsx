@@ -45,7 +45,25 @@ const handleSubmit = (e) => {
 };
 
 return (
-    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem'}}>
+    <div style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        padding: '1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+    }}>
+    {
+    <form 
+        onSubmit={handleSubmit} 
+        style={{ 
+            display: 'grid', 
+            gap: '1rem',
+            maxWidth: '500px',
+            width: '100%',
+            marginBottom: '2rem'
+        }}
+    >
         <h2>Create New Task</h2>
 
     <label>
@@ -153,8 +171,23 @@ return (
         />
     </label>
     
-    <button type="submit">Add Task</button>
+    <button 
+    type="submit" 
+    style={{
+        padding: '0.5rem 1rem',
+        backgroundColor: '#4f46e5',
+        color: 'white',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        width: '160px',
+        margin: '0 auto'
+    }}>
+        Add Task
+    </button>
     
     </form>
+    }
+    </div>
     );
 }
