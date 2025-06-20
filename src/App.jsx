@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import reactLogo from './assets/react.svg';
 import TaskForm from './components/TaskForm';
 import viteLogo from '/vite.svg';
@@ -9,6 +9,7 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState('list');
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("smart-tasks");
@@ -32,9 +33,48 @@ function App() {
     setTasks(prev => prev.filter(task => task.id !== id));
   };
 
+  useEffect(() => {
+    const saved = localStorage.getItem('smart-theme');
+    if (saved) setDarkMode (saved === 'dark');
+  }, []);
+
+  useEffect(() => {
+    const theme = darkMode ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem("smart-theme", theme);
+  }, [darkMode]);
+
   return (
+  <div>
+    <div
+      style={{
+        position: 'fixed',
+        top: '1rem',
+        right: '1rem',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        background: 'var(--header-bg)',
+        padding: '0.3rem 0.6rem',
+        borderRadius: '20px',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+      }}>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={darkMode}
+            onChange={() => setDarkMode(prev => !prev)}
+          />
+          <span className='slider' />
+        </label>
+    </div>
+
+
     <div style={{maxWidth: '900px', margin: '0 auto', padding: '1rem'}}>
+      
       <h1>Smart Calendar</h1>
+
       <div style={{marginBottom: '2rem'}}>
         <TaskForm onAdd={addTask} />
       </div>
@@ -94,6 +134,7 @@ function App() {
         </>
       )}
     </div>
+  </div>
   );
 }
 

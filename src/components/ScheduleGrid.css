@@ -2,11 +2,12 @@
     display: grid;
     grid-template-columns: 60px repeat(7,1fr);
     gap: 1px;
-    background-color: #f5faff;
+    background-color: var(--bg-color);
     max-width: 100%;
     width: 100%;
     font-family: sans-serif;
     box-sizing: border-box;
+    color: var(--text-color);
 }
 
 .header-row{
@@ -16,10 +17,10 @@
 .day-header{
     padding: 8px;
     font-weight: bold;
-    background-color: #e2f0ff;
+    background-color: var(--header-bg);
     border: 1px solid #bbb;
     text-align: center;
-    color: #003366;
+    color: var(--text-color);
 }
 
 .hour-row {
@@ -37,7 +38,7 @@
 .grid-cell{
     min-height: 40px;
     height: 60px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--grid-color);
     padding: 4px 6px;
     position: relative;
     display: flex;
@@ -58,7 +59,11 @@
     transition: transform 0.1s ease;
     max-width: 90%;
     box-sizing: border-box;
+    background-color: var(--task-flexible);
 }
 .task-block:hover{
     transform: scale(1.00);
+}
+.task-block.locked{
+    background-color: var(--task-locked);
 }

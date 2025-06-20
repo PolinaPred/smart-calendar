@@ -49,10 +49,7 @@ export default function ScheduleGrid({ tasks }){
                                     return (
                                         <div 
                                             key={task.id} 
-                                            className="task-block"
-                                            style={{
-                                                backgroundColor: task.locked ? '#003366' : '#4a90e2'
-                                            }}
+                                            className={`task-block ${task.locked ? 'locked' : ''}`}
                                         >
                                         {task.title}
                                         </div>
