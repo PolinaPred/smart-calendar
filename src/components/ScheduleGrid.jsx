@@ -43,7 +43,9 @@ export default function ScheduleGrid({ tasks }){
                     {slots.map(({task, start, end}) => (
                         <div key={`${task.id}-${start}`} className={`task-block ${task.locked ? 'Stone' : 'Sand'}`}>
                             <strong>{task.title}</strong><br />
-                            <span>{format(new Date(start), "HH:mm")} - {format(new Date(end), "HH:mm")}</span>
+                            <span>
+                            {format(new Date(start), "hh:mm")} - {format(new Date(end), "hh:mmaaa").toLowerCase()}
+                            </span>
                         </div>
                     ))}
                 </div>

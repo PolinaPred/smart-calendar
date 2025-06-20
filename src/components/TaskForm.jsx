@@ -17,6 +17,7 @@ const handleSubmit = (e) => {
 
     const task = {
         id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
         title,
         duration: parseFloat(duration),
         locked,

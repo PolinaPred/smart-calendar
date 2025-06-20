@@ -1,4 +1,4 @@
-import {parseISO, addMinutes, format, isBefore} from 'date-fns';
+import {parseISO, addMinutes, format, isBefore, addDays, addWeeks, addMonths, differenceInDays} from 'date-fns';
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const START_HOUR = 6;
@@ -25,6 +25,66 @@ function hasSpace(daySlots, startTime, duration){
         }
     }
     return true;
+}
+
+function expandRepeatingTasks(tasks){
+    const expanded = [];
+
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(currentWeekStart.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+    const currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+
+    for (const task of tasks){
+        if (task.repeating && !task.locked && task.repeatEvery){
+            const {value, unit} = task.repeatEvery;
+            const baseDate = task.createdAt ? new Date(task.createdAt) : new Date(task.id ? parseInt(task.id) : Date.now());
+
+            for (let d = new Date(currentWeekStart); d <= currentWeekEnd; d.setDate(d.getDate() + 1)){
+                const diff = differenceInDays(d, baseDate);
+
+                let match = false;
+                if (unit === 'day'){
+                    match = diff % value === 0;
+                } else if (unit === 'week'){
+                    match = diff % (7 * value) === 0;
+                } else if (unit === 'month') {
+                    const monthsPassed = (d.getFullYear() - baseDate.getFullYear()) * 12 + (d.getMonth() - baseDate.getMonth());
+                    match = monthsPassed % value === 0 && d.getDate() === baseDate.getDate();
+                }
+
+                if(match){
+                    const clone = {
+                        ...task,
+                        id: `${task.id}-r${d.toDateString()}`,
+                        scheduledAt: null
+                    };
+                    expanded.push(clone);
+                }
+            }
+        } else if (task.repeating && task.locked && task.repeatOn?.day?.length){
+            for (const day of task.repeatOn.day){
+                const index = DAYS.indexOf(day);
+                if (index !== -1) {
+                    const d = new Date(currentWeekStart);
+                    d.setDate(currentWeekStart.getDate() + index);
+                    const time = task.scheduledAt ? new Date(task.scheduledAt) : new Date();
+                    d.setHours(time.getHours(), time.getMinutes(), 0, 0);
+
+                    const clone = {
+                        ...task, 
+                        id: `${task.id}-r${d.toDateString()}`, 
+                        scheduledAt: d.toISOString()
+                    };
+                    expanded.push(clone);
+                }
+            }
+        } else{
+            expanded.push(task);
+        }
+    }
+    return expanded;
 }
 
 function insertFlexible(task, weekGrid){
@@ -58,35 +118,34 @@ function insertFlexible(task, weekGrid){
 
 export function generateWeekSchedule(tasks) {
     const grid = initWeekGrid();
-    for (let task of tasks){
+    const expandedTasks = expandRepeatingTasks(tasks);
+
+    for (let task of expandedTasks){
         if(!task || (task.locked && (!task.scheduledAt || isNaN(new Date(task.scheduledAt))))){
             console.warn("Invalid scheduledAt value for task:", task);
             continue;
-        }else{
-            if(task.locked && task.scheduledAt){
-                const date = new Date(task.scheduledAt);
-                const day = DAYS[(date.getDay() + 6) % 7];
-                const end = addMinutes(date, task.duration * 60);
-                console.log("Locked task date:", task.scheduledAt, "→ Day:", day);
+        }
+        
+        if(task.locked && task.scheduledAt){
+            const date = new Date(task.scheduledAt);
+            const day = DAYS[(date.getDay() + 6) % 7];
+            const end = addMinutes(date, task.duration * 60);
 
-                if (DAYS.includes(day)){
-                    grid[day].push({
-                        start: date.toISOString(),
-                        end: end.toISOString(),
-                        task
-                    });
-                }else{
-                    console.warn("Invalid day parsed for locked task:", task);
-                }
+            if (DAYS.includes(day)){
+                grid[day].push({
+                    start: date.toISOString(),
+                    end: end.toISOString(),
+                    task
+                });
             }
         }
     }
 
-    for (let task of tasks){
+    for (let task of expandedTasks){
         if(!task.locked){
             insertFlexible(task, grid);
         }
     }
-    console.log("Final schedule grid:", grid);
+    
     return grid;
 }
