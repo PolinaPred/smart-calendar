@@ -56,6 +56,7 @@ return (
     {
     <form 
         onSubmit={handleSubmit} 
+        className="task-form"
         style={{ 
             display: 'grid', 
             gap: '1rem',
@@ -66,110 +67,110 @@ return (
     >
         <h2>Create New Task</h2>
 
-    <label>
-        Title:
-        <input value={title} onChange={e => setTitle(e.target.value)} required/>
-    </label>
+    <div className="form-row">
+        <label htmlFor="title">Title:</label>
+        <input id="title" type="text" value={title} onChange={e => setTitle(e.target.value)} required/>
+    </div>
     
-    <label>
-        Duration (hours):
+    <div className="form-row">
+        <label>Duration (hours):</label>
         <input
-        type="number"
-        step="0.25"
-        value={duration}
-        onChange={e => setDuration(e.target.value)}
-        required
+            type="number"
+            step="0.25"
+            value={duration}
+            onChange={e => setDuration(e.target.value)}
+            required
         />
-    </label>
+    </div>
 
-    <label>
-        Is this a stone?
+    <div className="form-row">
+        <label>Is this a stone?</label>
         <input
-        type="checkbox"
-        checked={locked}
-        onChange={e => setLocked(e.target.checked)}
+            type="checkbox"
+            checked={locked}
+            onChange={e => setLocked(e.target.checked)}
         />
-    </label>
-
+    </div>
+    
     {locked && (
-        <label>
-            Scheduled At:
+        <div className="form-row">
+            <label>Scheduled At:</label>
             <input
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={e => setScheduledAt(e.target.value)}
                 step="60"
             />
-        </label>
+        </div>
     )}
-
-    <label>
-        Is this task recurring?
+    
+    <div className="form-row">
+        <label>Is this task recurring?</label>
         <input
-        type="checkbox"
-        checked={repeating}
-        onChange={e => setRepeating(e.target.checked)}
+            type="checkbox"
+            checked={repeating}
+            onChange={e => setRepeating(e.target.checked)}
         />
-    </label>
+    </div>
     
     {repeating && (
-        <>
-        {locked == false && (
-            <label>
-                Complete every:
+            <>
+            {locked == false && (
+                <div className="form-row">
+                <label>Complete every:</label>
                 <input
-                type="number"
-                min="1"
-                value={repeatEveryValue}
-                onChange={e => setRepeatEveryValue(e.target.value)}
-                style={{width: '4rem', marginRight: '0.5rem'}}
+                    type="number"
+                    min="1"
+                    value={repeatEveryValue}
+                    onChange={e => setRepeatEveryValue(e.target.value)}
+                    style={{width: '4rem', marginRight: '0.5rem'}}
                 />
                 <select
-                value={repeatEveryUnit}
-                onChange={e => setRepeatEveryUnit(e.target.value)}
+                    value={repeatEveryUnit}
+                    onChange={e => setRepeatEveryUnit(e.target.value)}
                 >
-                <option value="day">Day(s)</option>
-                <option value="week">Week(s)</option>
-                <option value="month">Month(s)</option>
+                    <option value="day">Day(s)</option>
+                    <option value="week">Week(s)</option>
+                    <option value="month">Month(s)</option>
                 </select>
-            </label>
-        )}
+                </div>
+            )}
 
-        {locked == true && (
-            <fieldset>
-                <legend>Repeat on:</legend>
-                {['Monday',"Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day =>(
-                    <label key={day} style={{display: 'block', marginBottom: '4px'}}>
-                        <input
-                            type="checkbox"
-                            value={day}
-                            checked={repeatDay.includes(day)}
-                            onChange={e => {
-                                const checked = e.target.checked;
-                                    setRepeatDay(prev => {
-                                        if (checked) {
-                                            return prev.includes(day) ? prev : [...prev, day];
-                                        }else{
-                                            return prev.filter(d => d !== day);
-                                        }
-                                });
-                            }}
-                        />
-                        {day}
-                    </label>
-                ))}
-            </fieldset>
-        )}
-        </>
+            {locked == true && (
+                <fieldset>
+                    <legend>Repeat on:</legend>
+                    {['Monday',"Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day =>(
+                        <label key={day} style={{display: 'block', marginBottom: '4px'}}>
+                            <input
+                                type="checkbox"
+                                value={day}
+                                checked={repeatDay.includes(day)}
+                                onChange={e => {
+                                    const checked = e.target.checked;
+                                        setRepeatDay(prev => {
+                                            if (checked) {
+                                                return prev.includes(day) ? prev : [...prev, day];
+                                            }else{
+                                                return prev.filter(d => d !== day);
+                                            }
+                                    });
+                                }}
+                            />
+                            {day}
+                        </label>
+                    ))}
+                </fieldset>
+            )}
+            </>
     )}
-
-    <label>
-        Notes:
+    
+    <div className="form-row">
+        <label>Notes:</label>
         <textarea 
             value={notes} 
             onChange={e => setNotes(e.target.value)}
         />
-    </label>
+    </div>
     
     <button 
     type="submit" 

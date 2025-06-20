@@ -51,22 +51,19 @@ function App() {
         position: 'fixed',
         top: '1rem',
         right: '1rem',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        background: 'var(--header-bg)',
-        padding: '0.3rem 0.6rem',
-        borderRadius: '20px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+        zIndex: 1000
       }}>
-        <label className="switch">
+        <label className="floating-toggle"
+        title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
           <input
             type="checkbox"
             checked={darkMode}
             onChange={() => setDarkMode(prev => !prev)}
           />
-          <span className='slider' />
+          <span className="slider"/>
+          <span className="emoji">
+            {darkMode ? '🌙' : '☀️'}
+          </span>
         </label>
     </div>
 
@@ -118,7 +115,7 @@ function App() {
             {tasks.map(t => (
               <li key={t.id}>
                 {t.title} ({t.locked ? "Stone" : "Sand"}, {t.duration} hr{t.duration !== 1 ? 's' : ''})
-                <button onClick={() => deleteTask(t.id)} style = {{ marginLeft: '1rem'}}>
+                <button onClick={() => deleteTask(t.id)} style = {{ marginLeft: '1rem', marginBottom: '0.6rem', paddingTop: '0.2rem', paddingBottom: '0.4rem'}}>
                   Delete
                 </button>
               </li>
