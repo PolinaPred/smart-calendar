@@ -12,16 +12,17 @@ function initWeekGrid() {
     return grid;
 }
 
-function hasSpace(daySlots, startTime, duration){
-    const endTime = addMinutes(startTime, duration * 60);
+function hasSpace(daySlots, startTime, duration, bufferBefore = 0, bufferAfter = 0){
+    const startWithBuffer = addMinutes(startTime, -bufferBefore);
+    const endWithBuffer = addMinutes(startTime, duration * 60 + bufferAfter);
     
     for (let slot of daySlots){
         const slotStart = new Date(slot.start);
         const slotEnd = new Date(slot.end);
 
-        const overlaps = startTime <slotEnd && endTime > slotStart;
+        const overlaps = startWithBuffer <slotEnd && endWithBuffer > slotStart;
 
-        if(overlaps)return false; 
+        if(overlaps) return false; 
     }
     return true;
 }
@@ -57,8 +58,17 @@ function expandRepeatingTasks(tasks){
                     const clone = {
                         ...task,
                         id: `${task.id}-r${d.toDateString()}`,
-                        scheduledAt: null
+                        originalId: task.id,
+                        scheduledAt: null,
+                        bufferBefore: task.bufferBefore || 0,
+                        bufferAfter: task.bufferAfter || 0
                     };
+
+                    if(task.instanceOverrides && task.instanceOverrides[clone.id]){
+                        const override = task.instanceOverrides[clone.id];
+                        clone.bufferAfter = override.bufferAfter;
+                        clone.bufferBefore = override.bufferBefore;
+                    }
                     expanded.push(clone);
                 }
             }
@@ -74,8 +84,15 @@ function expandRepeatingTasks(tasks){
                     const clone = {
                         ...task, 
                         id: `${task.id}-r${d.toDateString()}`, 
+                        originalId: task.id,
                         scheduledAt: d.toISOString()
                     };
+
+                    if(task.instanceOverrides && task.instanceOverrides[clone.id]){
+                        const override = task.instanceOverrides[clone.id];
+                        clone.bufferBefore = override.bufferBefore;
+                        clone.bufferAfter = override.bufferAfter;
+                    }
                     expanded.push(clone);
                 }
             }
@@ -102,8 +119,8 @@ function insertFlexible(task, weekGrid){
         while (testDate <= latestStart) {
             const day = DAYS[(testDate.getDay() + 6) % 7];
 
-            if (hasSpace(weekGrid[day], testDate, task.duration)){
-                const end = addMinutes(testDate, durationMins);
+            if (hasSpace(weekGrid[day], testDate, task.duration, task.bufferBefore || 0, task.bufferAfter || 0)){
+                const end = addMinutes(testDate, task.duration * 60);
                 weekGrid[day].push({
                     start: testDate.toISOString(),
                     end: end.toISOString(),
@@ -118,21 +135,25 @@ function insertFlexible(task, weekGrid){
 
 export function generateWeekSchedule(tasks) {
     const grid = initWeekGrid();
+
     const expandedTasks = expandRepeatingTasks(tasks);
 
     for (let task of expandedTasks){
         if(task.locked && task.scheduledAt){
             const date = new Date(task.scheduledAt);
             const day = DAYS[(date.getDay() + 6) % 7];
-            const end = addMinutes(date, task.duration * 60);
 
-            if (DAYS.includes(day)){
-                grid[day].push({
-                    start: date.toISOString(),
-                    end: end.toISOString(),
-                    task
-                });
-            }
+            const bufferBefore = task.bufferBefore || 0;
+            const bufferAfter = task.bufferAfter || 0;
+
+            const adjustedStart = addMinutes(date, -bufferBefore);
+            const adjustedEnd = addMinutes(date, task.duration * 60 + bufferAfter);
+
+            grid[day].push({
+                start: adjustedStart.toISOString(),
+                end: adjustedEnd.toISOString(),
+                task
+            });
         }
     }
 
@@ -140,6 +161,10 @@ export function generateWeekSchedule(tasks) {
         if(!task.locked){
             insertFlexible(task, grid);
         }
+    }
+
+    for (const day of DAYS){
+        grid[day].sort((a, b) => new Date(a.start) - new Date(b.start));
     }
     
     return grid;

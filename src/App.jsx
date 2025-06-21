@@ -4,12 +4,15 @@ import TaskForm from './components/TaskForm';
 import viteLogo from '/vite.svg';
 import './App.css';
 import ScheduleGrid from './components/ScheduleGrid';
+import TaskEditor from './components/TaskEditor';
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState('list');
   const [darkMode, setDarkMode] = useState(false);
+
+  const [editingTask, setEditingTask] = useState(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("smart-tasks");
@@ -43,6 +46,44 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem("smart-theme", theme);
   }, [darkMode]);
+
+  const handleSave = (updatedTask) => {
+        setTasks(prevTasks =>{
+            if(updatedTask.applyBufferToRepeats){
+                const baseId = updatedTask.id.split('-r')[0];
+                return prevTasks.map(t =>
+                    t.id === baseId || t.id.startsWith(`${baseId}-r`)
+                      ? { ...t, bufferBefore: updatedTask.bufferBefore, bufferAfter: updatedTask.bufferAfter }
+                      : t
+                );
+            } else {
+              if(updatedTask.originalId && updatedTask.id.includes('-r')){
+                return prevTasks.map(t =>
+                  t.id === updatedTask.originalId
+                    ? {
+                      ...t,
+                      instanceOverrides: {
+                        ...(t.instanceOverrides || {}),
+                        [updatedTask.id]: {
+                          bufferBefore: updatedTask.bufferBefore,
+                          bufferAfter: updatedTask.bufferAfter
+                        }
+                      }
+                    }
+                  : t
+                );
+              }else{                
+                return prevTasks.map(t => 
+                  t.id === updatedTask.id 
+                  ? {...t, bufferBefore: updatedTask.bufferBefore, bufferAfter: updatedTask.bufferAfter} 
+                  : t
+                );
+              }
+            }
+        });
+
+        setEditingTask(null);
+    };
 
   return (
   <div>
@@ -115,6 +156,11 @@ function App() {
             {tasks.map(t => (
               <li key={t.id}>
                 {t.title} ({t.locked ? "Stone" : "Sand"}, {t.duration} hr{t.duration !== 1 ? 's' : ''})
+                
+                <button onClick={() => setEditingTask(t)} style={{marginLeft:'1rem', marginBottom: '0.6rem', paddingTop: '0.2rem', paddingBottom: '0.4rem'}}>
+                  Edit
+                </button>
+
                 <button onClick={() => deleteTask(t.id)} style = {{ marginLeft: '1rem', marginBottom: '0.6rem', paddingTop: '0.2rem', paddingBottom: '0.4rem'}}>
                   Delete
                 </button>
@@ -126,11 +172,18 @@ function App() {
         <>
           <h2>Weekly View</h2>
           <div style={{width: '100%', overflowX: 'auto'}}>
-            <ScheduleGrid tasks={tasks} />
+            <ScheduleGrid tasks={tasks} setEditingTask={setEditingTask} />
           </div>
         </>
       )}
     </div>
+    {editingTask && (
+                <TaskEditor
+                    task={editingTask}
+                    onClose={() => setEditingTask(null)}
+                    onSave={handleSave}
+                />
+            )}
   </div>
   );
 }
