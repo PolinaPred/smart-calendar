@@ -143,3 +143,15 @@ input[type="radio"] {
 [data-theme="light"] input[type="time"] {
   color-scheme: light;
 }
+
+html, body {
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  overscroll-behavior: contain;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
+
+  min-height: 100vh;
+  margin: 0;
+}

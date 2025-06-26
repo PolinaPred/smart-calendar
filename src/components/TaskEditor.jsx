@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import './.TaskEditor.css';
 
 export default function TaskEditor({ task, onClose, onSave}){
     const [bufferBefore, setBufferBefore] = useState(task.bufferBefore || 0);
@@ -17,7 +16,6 @@ export default function TaskEditor({ task, onClose, onSave}){
     };
 
     return(
-    <div className="modal-overlay" onClick={onClose}>
         <div className="modal" onClick={e => e.stopPropagation()}>
             <h2>Edit Task: {task.title || task.name}</h2>
 
@@ -59,6 +57,5 @@ export default function TaskEditor({ task, onClose, onSave}){
             <button onClick={handleSave}>Save</button>
             <button onClick={onClose}>Cancel</button>
         </div>
-    </div>
     );
 }
