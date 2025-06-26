@@ -48,6 +48,62 @@ function App() {
   }, [darkMode]);
 
   const handleSave = (updatedTask) => {
+    const isInstance = updatedTask.originalId && updatedTask.id.includes("-r");
+    const baseId = isInstance ? updatedTask.originalId : updatedTask.id;
+      
+    setTasks(prevTasks =>{
+        return prevTasks.map(t => {
+          if(t.id !== baseId) return t;
+
+          const updated = {...t};
+          const overrides = {...(updated.instanceOverrides || {})};
+
+          if (updatedTask.applyBufferToRepeats){
+            updated.bufferBefore = updatedTask.bufferBefore;
+            updated.bufferAfter = updatedTask.bufferAfter;
+
+            for (const [instanceId, instance] of Object.entries(overrides)) {
+              overrides[instanceId] = {
+                ...instance,
+                ...(instance.bufferBefore == null && {bufferBefore: updatedTask.bufferBefore}),
+                ...(instance.bufferAfter == null && {bufferAfter: updatedTask.bufferAfter})
+              };
+            }
+            updated.instanceOverrides = overrides;
+          } else {
+            if (isInstance){
+              overrides[updatedTask.id] = {
+                ...overrides[updatedTask.id],
+                bufferBefore: updatedTask.bufferBefore,
+                bufferAfter: updatedTask.bufferAfter,
+              };
+              updated.instanceOverrides = {
+                ...(updated.instanceOverrides || {}),
+                [updatedTask.id]: {
+                  ...(updated.instanceOverrides?.[updatedTask.id] || {}),
+                  bufferBefore: updatedTask.bufferBefore,
+                  bufferAfter: updatedTask.bufferAfter
+                }
+              };
+            } else {
+              updated.bufferAfter = updatedTask.bufferAfter;
+              updated.bufferBefore = updatedTask.bufferBefore;
+            }
+          }
+
+          if(
+            overrides[updatedTask.id]?.bufferBefore === updatedTask.bufferBefore &&
+            overrides[updatedTask.id]?.bufferAfter === updatedTask.bufferAfter
+          ){
+            delete overrides[updatedTask.id];
+          }
+          updated.instanceOverrides = overrides;
+          return updated;
+        });
+      });
+      setEditingTask(null);
+    };
+    /*
         setTasks(prevTasks =>{
             if(updatedTask.applyBufferToRepeats){
                 const baseId = updatedTask.id.split('-r')[0];
@@ -84,6 +140,7 @@ function App() {
 
         setEditingTask(null);
     };
+    */
 
   return (
   <div>
