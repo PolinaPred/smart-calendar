@@ -18,12 +18,16 @@ export default function TaskEditor({ task, onClose, onSave}){
     const handleSave = () => {
         const payload = {
             ...task,
-            applyBufferToRepeats: applyToAllInstances
+            applyBufferToRepeats: applyToAllInstances,
+            changedBefore,
+            changedAfter,
+            bufferBefore,
+            bufferAfter
         };
-
+        
         if (changedAfter) payload.bufferAfter = bufferAfter;
         if (changedBefore) payload.bufferBefore = bufferBefore;
-
+        
         onSave(payload);
         onClose();
     };

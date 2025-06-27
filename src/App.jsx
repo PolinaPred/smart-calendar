@@ -55,142 +55,94 @@ function App() {
         return prevTasks.map(task => {
           const isCurrentInstance = isInstance && task.id === updatedTask.id;
           const isBase = task.id === baseId;
-          const isRelatedInstance = task.originalID === baseId;
+          const isRelatedInstance = task.originalId === baseId;
 
           //Apply to all instances:
           if(updatedTask.applyBufferToRepeats) {
             if(isBase){
-              return {
-                ...task,
-                bufferBefore: updatedTask.bufferBefore,
-                bufferAfter: updatedTask.bufferAfter,
-                instanceOverrides: {}
-              };
+              const newBaseTask = {...task};
+              //apply to base
+              if (updatedTask.changedBefore){
+                newBaseTask.bufferBefore = updatedTask.bufferBefore;
+              }
+              if(updatedTask.changedAfter){
+                newBaseTask.bufferAfter = updatedTask.bufferAfter;
+              }
+              //update instances whose override doesn't already override the field that is being changed
+              const oldOverrides = newBaseTask.instanceOverrides || {};
+              const newOverrides = {...oldOverrides};
+              
+              for (const [instanceId, override] of Object.entries(oldOverrides)) {
+                const updatedOverride = {...override};
+
+                if(
+                  updatedTask.changedBefore &&
+                  (override.bufferBefore === undefined || override.bufferBefore === null)
+                ) {
+                  updatedOverride.bufferBefore = updatedTask.bufferBefore;
+                }
+
+                if (
+                  updatedTask.changedAfter &&
+                  (override.bufferAfter === undefined || override.bufferAfter === null)
+                ) {
+                  updatedOverride.bufferAfter = updatedTask.bufferAfter;
+                }
+
+                  newOverrides[instanceId] = updatedOverride;
+                
+              }
+              newBaseTask.instanceOverrides = newOverrides;
+              return newBaseTask;
             }
-            if(isRelatedInstance){
-              return {
-                ...task
-              };
-            }
+
             return task;
           }
-          //Apply only to current instance:
-          if(isInstance && isBase) {
-            const overrides = {...(task.instanceOverrides || {}) };
-            overrides[updatedTask.id] = {
-              bufferBefore: updatedTask.bufferBefore,
-              bufferAfter: updatedTask.bufferAfter
-            };
-            if (
-              overrides[updatedTask.id].bufferBefore === task.bufferBefore &&
-              overrides[updatedTask.id].bufferAfter === task.bufferAfter
-            ) {
-              delete overrides[updatedTask.id];
+          //Individual instance updates:
+          if(isInstance && isCurrentInstance){
+            const overrides = { ...(task.instanceOverrides || {}) };
+            const newOverride = { ...(overrides[updatedTask.id] || {})};
+            
+            if(updatedTask.changedBefore){
+              newOverride.bufferBefore = updatedTask.bufferBefore;
             }
-
+            if(updatedTask.changedAfter){
+              newOverride.bufferAfter = updatedTask.bufferAfter;
+            }
+            //remove override if the property matches base
+            if(newOverride.bufferBefore === baseTask.bufferBefore){
+              delete newOverride.bufferBefore;
+            }
+            if(newOverride.bufferAfter === baseTask.bufferAfter){
+              delete newOverride.bufferAfter;
+            }
+            const updatedOverrides = {...overrides};
+            if(Object.keys(newOverride).length > 0){
+              updatedOverrides[updatedTask.id] = newOverride;
+            }else{
+              delete updatedOverrides[updatedTask.id];
+            }
             return {
-              ...task,
-              instanceOverrides: overrides
+              ...baseTask,
+              instanceOverrides: updatedOverrides
             };
           }
-
-          //Update ONLY base task
+          //Update base task separately:
           if(!isInstance && isBase){
-            return {
-              ...task,
-              bufferAfter: updatedTask.bufferAfter,
-              bufferBefore: updatedTask.bufferBefore
-            };
+            const newBaseTask = {...task};
+            if (updatedTask.changedBefore){
+              newBaseTask.bufferBefore = updatedTask.bufferBefore;
+            }
+            if(updatedTask.changedAfter){
+              newBaseTask.bufferAfter = updatedTask.bufferAfter;
+            }
+            return newBaseTask;
           }
           return task;
         });
       });
       setEditingTask(null);
-    };
-
-          /*
-          if(t.id !== baseId) return t;
-
-          const updated = {...t};
-          const overrides = {...(t.instanceOverrides || {}) };
-
-          if (updatedTask.applyBufferToRepeats) {
-            updated.bufferBefore = updatedTask.bufferBefore;
-            updated.bufferAfter = updatedTask.bufferAfter;
-
-            for (const [instanceId, instance] of Object.entries(overrides)) {
-              overrides[instanceId] = {
-                ...instance,
-                ...(instance.bufferBefore == null && {bufferBefore: updatedTask.bufferBefore}),
-                ...(instance.bufferAfter == null && {bufferAfter: updatedTask.bufferAfter})
-              };
-            }
-            updated.instanceOverrides = overrides;
-          } else if (isInstance){
-              const override = {
-                ...(overrides[updatedTask.id] || {}),
-                bufferBefore: updatedTask.bufferBefore,
-                bufferAfter: updatedTask.bufferAfter
-              };
-                
-              const sameAsBase =
-                override.bufferBefore === updated.bufferBefore &&
-                override.bufferAfter === updated.bufferAfter;
-              
-              if (sameAsBase)  {
-                delete overrides[updatedTask.id];
-              } else {
-                overrides[updatedTask.id] = override;
-              }
-            updated.instanceOverrides = overrides;
-          } else {
-            updated.bufferBefore = updatedTask.bufferBefore;
-            updated.bufferAfter = updatedTask.bufferAfter;
-          }
-        
-        return updated;
-      });
-    });
-      setEditingTask(null);
-    }; */
-    /*
-        setTasks(prevTasks =>{
-            if(updatedTask.applyBufferToRepeats){
-                const baseId = updatedTask.id.split('-r')[0];
-                return prevTasks.map(t =>
-                    t.id === baseId || t.id.startsWith(`${baseId}-r`)
-                      ? { ...t, bufferBefore: updatedTask.bufferBefore, bufferAfter: updatedTask.bufferAfter }
-                      : t
-                );
-            } else {
-              if(updatedTask.originalId && updatedTask.id.includes('-r')){
-                return prevTasks.map(t =>
-                  t.id === updatedTask.originalId
-                    ? {
-                      ...t,
-                      instanceOverrides: {
-                        ...(t.instanceOverrides || {}),
-                        [updatedTask.id]: {
-                          bufferBefore: updatedTask.bufferBefore,
-                          bufferAfter: updatedTask.bufferAfter
-                        }
-                      }
-                    }
-                  : t
-                );
-              }else{                
-                return prevTasks.map(t => 
-                  t.id === updatedTask.id 
-                  ? {...t, bufferBefore: updatedTask.bufferBefore, bufferAfter: updatedTask.bufferAfter} 
-                  : t
-                );
-              }
-            }
-        });
-
-        setEditingTask(null);
-    };
-    */
+    }
 
   return (
   <div>
