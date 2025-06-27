@@ -97,14 +97,14 @@ function App() {
 
                 if(
                   taskToSave.changedBefore &&
-                  (override.bufferBefore === undefined || override.bufferBefore === null)
+                  (override.bufferBefore === undefined || override.bufferBefore === null || instanceId === pendingSave.id)
                 ) {
                   updatedOverride.bufferBefore = taskToSave.bufferBefore;
                 }
 
                 if (
                   taskToSave.changedAfter &&
-                  (override.bufferAfter === undefined || override.bufferAfter === null)
+                  (override.bufferAfter === undefined || override.bufferAfter === null || instanceId === pendingSave.id)
                 ) {
                   updatedOverride.bufferAfter = taskToSave.bufferAfter;
                 }
@@ -272,7 +272,7 @@ function App() {
     )}
     {confirming && (
       <ConfirmModal
-      message="Apply changes to all future events?"
+      message="Apply changes to all similar tasks?"
       onConfirm={handleConfirm}
       />
     )}
