@@ -1,7 +1,5 @@
-import { use, useEffect, useState } from 'react';
-import reactLogo from './assets/react.svg';
+import { useEffect, useState } from 'react';
 import TaskForm from './components/TaskForm';
-import viteLogo from '/vite.svg';
 import './App.css';
 import ScheduleGrid from './components/ScheduleGrid';
 import TaskEditor from './components/TaskEditor';

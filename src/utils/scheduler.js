@@ -122,8 +122,11 @@ function insertFlexible(task, weekGrid){
             if (hasSpace(weekGrid[day], testDate, task.duration, task.bufferBefore || 0, task.bufferAfter || 0)){
                 const end = addMinutes(testDate, task.duration * 60);
                 weekGrid[day].push({
-                    start: testDate.toISOString(),
-                    end: end.toISOString(),
+                    start: addMinutes(testDate, -task.bufferBefore || 0).toISOString(),
+                    end: addMinutes(end, task.bufferAfter || 0).toISOString(),
+                    rawStart: testDate.toISOString(),
+                    bufferBefore: task.bufferBefore || 0,
+                    bufferAfter: task.bufferAfter || 0,
                     task
                 });
                 return;
@@ -152,7 +155,10 @@ export function generateWeekSchedule(tasks) {
             grid[day].push({
                 start: adjustedStart.toISOString(),
                 end: adjustedEnd.toISOString(),
-                task
+                task,
+                rawStart: date.toISOString(),
+                bufferBefore,
+                bufferAfter
             });
         }
     }

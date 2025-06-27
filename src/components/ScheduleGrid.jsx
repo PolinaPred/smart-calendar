@@ -2,6 +2,7 @@ import './ScheduleGrid.css';
 import { generateWeekSchedule } from '../utils/scheduler';
 import {format} from 'date-fns';
 import React from 'react';
+import {addMinutes} from 'date-fns';
 
 const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
@@ -17,7 +18,7 @@ export default function ScheduleGrid({ tasks, setEditingTask }){
             {Object.entries(schedule).map(([day, slots])=>(
                 <div key={day} className="day-column">
                     <h3>{day}</h3>
-                    {slots.map(({task, start, end}) => {
+                    {slots.map(({task, start, end, rawStart}) => {
                         const isInstance = task.originalId && task.id.includes("-r");
                         const baseTask = isInstance
                             ? tasks.find(t => t.id === task.originalId)
@@ -30,10 +31,23 @@ export default function ScheduleGrid({ tasks, setEditingTask }){
                         const bufferBefore = override.bufferBefore ?? baseTask.bufferBefore ?? 0;
                         const bufferAfter = override.bufferAfter ?? baseTask.bufferAfter ?? 0;
 
+                        const MINUTE_HEIGHT = 2;
+                        const bufferBeforeHeight = bufferBefore * MINUTE_HEIGHT;
+                        const bufferAfterHeight = bufferAfter * MINUTE_HEIGHT;
+                        const totalMinutes = (new Date(end) - new Date(start)) / 60000;
+                        const taskHeight = (totalMinutes - bufferBefore - bufferAfter) * MINUTE_HEIGHT;
+
                         return(
                             <div key={`${task.id}-${start}`} className="task-wrapper">
                                 {bufferBefore > 0 && (
-                                    <div className="buffer-zone before" style={{height: `${(bufferBefore / 60) * 100}%`}}/>
+                                    <div 
+                                    className="buffer-zone before" 
+                                    style={{height: `${bufferBeforeHeight}px`}}>
+                                    <span className="buffer-label">
+                                        {format(new Date(start), "hh:mmaaa").toLowerCase()}<br/>
+                                        ({bufferBefore} min)
+                                    </span>
+                                    </div>
                                 )}
 
                                 <div onClick={() => {
@@ -45,17 +59,23 @@ export default function ScheduleGrid({ tasks, setEditingTask }){
                                         originalId: task.originalId
                                     });
                                 }}
-                                    key={`${task.id}-${start}`} 
                                     className={`task-block ${task.locked ? 'Stone' : 'Sand'}`}
-                                    >
+                                    style ={{height: `${taskHeight}px`}}>
                                     <strong>{task.title}</strong><br />
                                     <span>
-                                        {format(new Date(start), "hh:mm")} - {format(new Date(end), "hh:mmaaa").toLowerCase()}
+                                        {format(new Date(rawStart), "hh:mmaaa")} - {format(new Date(end), "hh:mmaaa").toLowerCase()}
                                     </span>
                                 </div>
 
                                 {bufferAfter > 0 && (
-                                    <div className="buffer-zone after" style={{ height: `${(bufferAfter / 60) * 100}%` }} />
+                                    <div 
+                                    className="buffer-zone after" 
+                                    style={{ height: `${bufferAfterHeight}px` }}>
+                                    <span className="buffer-label">
+                                        ({bufferAfter} min) <br/>
+                                        {format(addMinutes(new Date(end), bufferAfter), "hh:mmaaa").toLowerCase()}
+                                        </span>
+                                    </div>
                                 )}
                             </div>
                         );
