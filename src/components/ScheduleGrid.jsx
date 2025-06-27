@@ -63,7 +63,7 @@ export default function ScheduleGrid({ tasks, setEditingTask }){
                                     style ={{height: `${taskHeight}px`}}>
                                     <strong>{task.title}</strong><br />
                                     <span>
-                                        {format(new Date(rawStart), "hh:mmaaa")} - {format(new Date(end), "hh:mmaaa").toLowerCase()}
+                                        {format(new Date(rawStart), "hh:mmaaa")} - {format(addMinutes(new Date(rawStart), task.duration * 60), "hh:mmaaa").toLowerCase()}
                                     </span>
                                 </div>
 
@@ -73,7 +73,7 @@ export default function ScheduleGrid({ tasks, setEditingTask }){
                                     style={{ height: `${bufferAfterHeight}px` }}>
                                     <span className="buffer-label">
                                         ({bufferAfter} min) <br/>
-                                        {format(addMinutes(new Date(end), bufferAfter), "hh:mmaaa").toLowerCase()}
+                                        {format(new Date(end), "hh:mmaaa").toLowerCase()}
                                         </span>
                                     </div>
                                 )}

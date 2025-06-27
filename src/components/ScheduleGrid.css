@@ -75,6 +75,8 @@
     user-select: none;
     position: relative;
     background-color: #4f9eed;
+    border-top: none;
+    border-bottom: none;
 }
 .task-block.Stone {
     background-color: var(--task-locked);

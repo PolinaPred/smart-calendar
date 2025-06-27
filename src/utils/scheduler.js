@@ -120,13 +120,20 @@ function insertFlexible(task, weekGrid){
             const day = DAYS[(testDate.getDay() + 6) % 7];
 
             if (hasSpace(weekGrid[day], testDate, task.duration, task.bufferBefore || 0, task.bufferAfter || 0)){
-                const end = addMinutes(testDate, task.duration * 60);
+                const bufferBefore = task.bufferBefore || 0;
+                const bufferAfter = task.bufferAfter || 0;
+
+                const rawStart = new Date(testDate);
+                const adjustedStart = addMinutes(rawStart, -bufferBefore);
+                const adjustedEnd = addMinutes(rawStart, task.duration * 60 + bufferAfter);
+                
+                //const end = addMinutes(testDate, task.duration * 60);
                 weekGrid[day].push({
-                    start: addMinutes(testDate, -task.bufferBefore || 0).toISOString(),
-                    end: addMinutes(end, task.bufferAfter || 0).toISOString(),
-                    rawStart: testDate.toISOString(),
-                    bufferBefore: task.bufferBefore || 0,
-                    bufferAfter: task.bufferAfter || 0,
+                    start: adjustedStart.toISOString(), //addMinutes(testDate, -task.bufferBefore || 0).toISOString(),
+                    end: adjustedEnd.toISOString(), //addMinutes(end, task.bufferAfter || 0).toISOString(),
+                    rawStart: rawStart.toISOString(), //testDate.toISOString(),
+                    bufferBefore,//: task.bufferBefore || 0,
+                    bufferAfter,//: task.bufferAfter || 0,
                     task
                 });
                 return;
