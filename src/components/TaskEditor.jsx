@@ -1,17 +1,30 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 
 export default function TaskEditor({ task, onClose, onSave}){
-    const [bufferBefore, setBufferBefore] = useState(task.bufferBefore || 0);
-    const [bufferAfter, setBufferAfter] = useState(task.bufferAfter || 0);
+    const isInstance = task.originalId && task.id.includes("-r");
+    const baseTask = isInstance ? null : task;
+    const override = isInstance ? (task.override || {}) : {};
+
+    const effectiveBufferBefore = override.bufferBefore ?? task.bufferBefore ?? 0;
+    const effectiveBufferAfter = override.bufferAfter ?? task.bufferAfter ?? 0;
+
+    const [bufferBefore, setBufferBefore] = useState(effectiveBufferBefore);
+    const [bufferAfter, setBufferAfter] = useState(effectiveBufferAfter);
     const [applyToAllInstances, setApplyToAllInstances] = useState(false);
 
+    const [changedBefore, setChangedBefore] = useState(false);
+    const [changedAfter, setChangedAfter] = useState(false);
+
     const handleSave = () => {
-        onSave({
+        const payload = {
             ...task,
-            bufferAfter,
-            bufferBefore,
-            applyBufferToRepeats: applyToAllInstances,
-        });
+            applyBufferToRepeats: applyToAllInstances
+        };
+
+        if (changedAfter) payload.bufferAfter = bufferAfter;
+        if (changedBefore) payload.bufferBefore = bufferBefore;
+
+        onSave(payload);
         onClose();
     };
 
@@ -25,7 +38,9 @@ export default function TaskEditor({ task, onClose, onSave}){
                     <input
                         type="number"
                         value={bufferBefore}
-                        onChange={e => setBufferBefore(Number(e.target.value))}
+                        onChange={e => {setBufferBefore(Number(e.target.value));
+                            setChangedBefore(true);
+                        }}
                         min={0}
                     />
                 </label>
@@ -37,7 +52,9 @@ export default function TaskEditor({ task, onClose, onSave}){
                     <input
                         type="number"
                         value={bufferAfter}
-                        onChange={e => setBufferAfter(Number(e.target.value))}
+                        onChange={e => {setBufferAfter(Number(e.target.value));
+                            setChangedAfter(true);
+                        }}
                         min={0}
                     />
                 </label>

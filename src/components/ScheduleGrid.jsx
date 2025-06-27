@@ -11,7 +11,6 @@ export default function ScheduleGrid({ tasks, setEditingTask }){
     if (!schedule || Object.keys(schedule).length === 0){
         return <p style={{ textAlign: 'center', marginTop: '2rem'}}>No tasks to display.</p>;
     }
-    console.log("Schedule passed to grid:", schedule);
 
     return (
         <div className="schedule-grid">
