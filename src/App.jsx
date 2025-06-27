@@ -5,13 +5,14 @@ import viteLogo from '/vite.svg';
 import './App.css';
 import ScheduleGrid from './components/ScheduleGrid';
 import TaskEditor from './components/TaskEditor';
+import ConfirmModal from './components/ConfirmModal';
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState('list');
   const [darkMode, setDarkMode] = useState(false);
-
+  const [pendingSave, setPendingSave] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
 
   useEffect(() => {
@@ -47,27 +48,48 @@ function App() {
     localStorage.setItem("smart-theme", theme);
   }, [darkMode]);
 
+  const [confirming, setConfirming] = useState(false);
+
   const handleSave = (updatedTask) => {
-    const isInstance = updatedTask.originalId && updatedTask.id.includes("-r");
-    const baseId = isInstance ? updatedTask.originalId : updatedTask.id;
-      
+    if(view === 'list'){
+      handleConfirm(true, updatedTask);
+    } else {
+      setPendingSave(updatedTask);
+      setConfirming(true);
+    }
+  };
+  const handleConfirm = (applyToAll, task = pendingSave) => {
+    if (!task) return;
+  
+    const isInstance = task.originalId && task.id.includes("-r");
+    const baseId = isInstance ? task.originalId : task.id;
+    const baseTask = tasks.find(t => t.id === baseId);
+    
+    const taskToSave = {
+      ...task,
+      applyBufferToRepeats: applyToAll
+    };
+
     setTasks(prevTasks =>{
         return prevTasks.map(task => {
-          const isCurrentInstance = isInstance && task.id === updatedTask.id;
+          const isCurrentInstance = isInstance && task.id === task.id;
           const isBase = task.id === baseId;
-          const isRelatedInstance = task.originalId === baseId;
-
+          
           //Apply to all instances:
-          if(updatedTask.applyBufferToRepeats) {
+          if(taskToSave.applyBufferToRepeats) {
             if(isBase){
               const newBaseTask = {...task};
               //apply to base
-              if (updatedTask.changedBefore){
-                newBaseTask.bufferBefore = updatedTask.bufferBefore;
+              if (taskToSave.changedBefore){
+                newBaseTask.bufferBefore = taskToSave.bufferBefore;
               }
-              if(updatedTask.changedAfter){
-                newBaseTask.bufferAfter = updatedTask.bufferAfter;
+              if(taskToSave.changedAfter){
+                newBaseTask.bufferAfter = taskToSave.bufferAfter;
               }
+              if (view === 'list'){
+                newBaseTask.instanceOverrides = {};
+              } else {
+
               //update instances whose override doesn't already override the field that is being changed
               const oldOverrides = newBaseTask.instanceOverrides || {};
               const newOverrides = {...oldOverrides};
@@ -76,73 +98,65 @@ function App() {
                 const updatedOverride = {...override};
 
                 if(
-                  updatedTask.changedBefore &&
+                  taskToSave.changedBefore &&
                   (override.bufferBefore === undefined || override.bufferBefore === null)
                 ) {
-                  updatedOverride.bufferBefore = updatedTask.bufferBefore;
+                  updatedOverride.bufferBefore = taskToSave.bufferBefore;
                 }
 
                 if (
-                  updatedTask.changedAfter &&
+                  taskToSave.changedAfter &&
                   (override.bufferAfter === undefined || override.bufferAfter === null)
                 ) {
-                  updatedOverride.bufferAfter = updatedTask.bufferAfter;
+                  updatedOverride.bufferAfter = taskToSave.bufferAfter;
                 }
 
                   newOverrides[instanceId] = updatedOverride;
                 
               }
               newBaseTask.instanceOverrides = newOverrides;
+            }
               return newBaseTask;
             }
 
             return task;
           }
-          //Individual instance updates:
-          if(isInstance && isCurrentInstance){
-            const overrides = { ...(task.instanceOverrides || {}) };
-            const newOverride = { ...(overrides[updatedTask.id] || {})};
+
+          if(isBase && view !== 'list'){
+            const base = {...task};
+            const overrides = { ...(baseTask.instanceOverrides || {}) };
+            const newOverride = { ...(overrides[pendingSave.id] || {})};
             
-            if(updatedTask.changedBefore){
-              newOverride.bufferBefore = updatedTask.bufferBefore;
+            if(taskToSave.changedBefore){
+              newOverride.bufferBefore = taskToSave.bufferBefore;
             }
-            if(updatedTask.changedAfter){
-              newOverride.bufferAfter = updatedTask.bufferAfter;
+            if(taskToSave.changedAfter){
+              newOverride.bufferAfter = taskToSave.bufferAfter;
             }
             //remove override if the property matches base
-            if(newOverride.bufferBefore === baseTask.bufferBefore){
+            if(newOverride.bufferBefore === base.bufferBefore){
               delete newOverride.bufferBefore;
             }
-            if(newOverride.bufferAfter === baseTask.bufferAfter){
+            if(newOverride.bufferAfter === base.bufferAfter){
               delete newOverride.bufferAfter;
             }
             const updatedOverrides = {...overrides};
             if(Object.keys(newOverride).length > 0){
-              updatedOverrides[updatedTask.id] = newOverride;
+              updatedOverrides[pendingSave.id] = newOverride;
             }else{
-              delete updatedOverrides[updatedTask.id];
+              delete updatedOverrides[pendingSave.id];
             }
-            return {
-              ...baseTask,
-              instanceOverrides: updatedOverrides
-            };
+            base.instanceOverrides = updatedOverrides;
+            return base;
           }
-          //Update base task separately:
-          if(!isInstance && isBase){
-            const newBaseTask = {...task};
-            if (updatedTask.changedBefore){
-              newBaseTask.bufferBefore = updatedTask.bufferBefore;
-            }
-            if(updatedTask.changedAfter){
-              newBaseTask.bufferAfter = updatedTask.bufferAfter;
-            }
-            return newBaseTask;
-          }
-          return task;
+            
+            return task;
         });
       });
       setEditingTask(null);
-    }
+      setConfirming(false);
+      setPendingSave(null);
+    };
 
   return (
   <div>
@@ -257,7 +271,13 @@ function App() {
                     onClose={() => setEditingTask(null)}
                     onSave={handleSave}
                 />
-            )}
+    )}
+    {confirming && (
+      <ConfirmModal
+      message="Apply changes to all future events?"
+      onConfirm={handleConfirm}
+      />
+    )}
   </div>
   );
 }
