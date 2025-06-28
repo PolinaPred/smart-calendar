@@ -1,13 +1,13 @@
 import './ScheduleGrid.css';
 import { generateWeekSchedule } from '../utils/scheduler';
 import {format} from 'date-fns';
-import React from 'react';
+import React, {useMemo} from 'react';
 import {addMinutes} from 'date-fns';
 
 const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
 export default function ScheduleGrid({ tasks, setEditingTask }){
-    const schedule = generateWeekSchedule(tasks);
+    const schedule = useMemo(() => generateWeekSchedule(tasks), [tasks]);
 
     if (!schedule || Object.keys(schedule).length === 0){
         return <p style={{ textAlign: 'center', marginTop: '2rem'}}>No tasks to display.</p>;

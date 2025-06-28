@@ -135,6 +135,26 @@ function insertFlexible(task, weekGrid){
                 }
             }
 
+            const hour = testDate.getHours() + testDate.getMinutes() / 60;
+            const earlyBird = (22 - hour) * 0.25;
+            let preferredBoost = 0;
+
+            if(task.prefStartTime != null && task.prefEndTime != null){
+                    if(hour >= task.prefStartTime && hour < task.prefEndTime){
+                        preferredBoost = 3;
+                    } else {
+                        if(task.strictStart && hour < task.prefStartTime) {
+                    testDate.setMinutes(testDate.getMinutes() + 15);
+                    continue;
+                        }
+                        if(task.strictEnd && hour >= task.prefEndTime) {
+                    testDate.setMinutes(testDate.getMinutes() + 15);
+                    continue;
+                        }
+                        preferredBoost = -2;
+                    }
+            }
+
             const lastSameType = existingSameTasks.sort((a, b) => new Date(b.start) - new Date(a.start))[0];
             if(lastSameType){
                 const gap = (testDate - new Date(lastSameType.start)) / (1000 * 60 * 60);
@@ -159,7 +179,9 @@ function insertFlexible(task, weekGrid){
                 let score =
                 (7-i) * 1.5 + 
                 (22-totalHours(weekGrid[day])) * 0.75 + 
-                Math.random() * 0.2;
+                Math.random() * 0.2 +
+                preferredBoost +
+                earlyBird;
 
                 const sameTypeToday = weekGrid[day].filter(slot => slot.task.title === task.title).length;
                 score -= sameTypeToday * penaltyFactor;

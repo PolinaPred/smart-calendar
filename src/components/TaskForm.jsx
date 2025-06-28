@@ -15,6 +15,17 @@ export default function TaskForm({ onAdd }){
     const[maxPer, setMaxPer] = useState(false);
     const[maxPerValue, setMaxPerValue] = useState(1);
     const[maxPerUnit, setMaxPerUnit] = useState("day");
+    const[timeLock, setTimeLock] = useState(false);
+    const[prefStartTime, setPrefStartTime] = useState('');
+    const[prefEndTime, setPrefEndTime] = useState('');
+    const[strictStart, setStrictStart] = useState(false);
+    const[strictEnd, setStrictEnd] = useState(false);
+
+const parseTimeString = (timeStr) => {
+    if (!timeStr) return null;
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    return hours + minutes / 60;
+}
 
 const handleSubmit = (e) => {
     e.preventDefault();
@@ -39,7 +50,12 @@ const handleSubmit = (e) => {
         dueDate: deadline ? dueDate : null,
         maxPer: repeating && !locked && maxPer
             ? {value: maxPerValue, unit: maxPerUnit}
-            : null
+            : null,
+        timeLock,
+        prefStartTime: timeLock && !locked ? parseTimeString(prefStartTime) : null,
+        prefEndTime: timeLock && !locked ? parseTimeString(prefEndTime) : null,
+        strictStart,
+        strictEnd
     };
 
     onAdd(task);
@@ -58,6 +74,11 @@ const handleSubmit = (e) => {
     setMaxPer(false);
     setMaxPerValue(1);
     setMaxPerUnit('day');
+    setTimeLock(false);
+    setPrefStartTime('');
+    setPrefEndTime('');
+    setStrictStart(false);
+    setStrictEnd(false);
 };
 
 return (
@@ -134,7 +155,7 @@ return (
             {!locked && (
                 <>
                 <div className="form-row">
-                    <label>Minimum frequency - complete every:</label>
+                    <label>Minimum frequency - <br />complete every:  </label>
                     <input
                         type="number"
                         min="1"
@@ -169,6 +190,7 @@ return (
                             onChange={e => setMaxPerValue(e.target.value)}
                             style={{width: '4rem', marginRight: '0.5rem'}}
                         />
+                        <label>per</label>
                         <select
                             value={maxPerUnit}
                             onChange={e => setMaxPerUnit(e.target.value)}>
@@ -220,7 +242,7 @@ return (
                 />
             </div>
 
-            {deadline == true && (
+            {deadline && (
                 <div className="form-row">
                     <label>Complete by:</label>
                     <input
@@ -230,6 +252,54 @@ return (
                         step="60"
                     />
                 </div>
+            )}
+
+            <div className="form-row">
+                <label>Should this task be done at a certain time?</label>
+                <input
+                    type="checkbox"
+                    checked={timeLock}
+                    onChange={e => setTimeLock(e.target.checked)}
+                />
+            </div>
+
+            {timeLock && (
+                <>
+                <div className="form-row">
+                    <>
+                    <label>After:</label>
+                    <input
+                        type="time"
+                        value={prefStartTime}
+                        onChange={e => setPrefStartTime(e.target.value)}
+                        step="60"
+                    />
+                    </>
+                    <label>Can this task ONLY be done after this time?</label>
+                    <input
+                        type="checkbox"
+                        checked={strictStart}
+                        onChange={e => setStrictStart(e.target.checked)}
+                    />
+                </div>
+                <div className="form-row">
+                    <>
+                    <label>Before:</label>
+                    <input
+                        type="time"
+                        value={prefEndTime}
+                        onChange={e => setPrefEndTime(e.target.value)}
+                        step="60"
+                    />
+                    </>
+                    <label>Can this task ONLY be done before this time?</label>
+                    <input
+                        type="checkbox"
+                        checked={strictEnd}
+                        onChange={e => setStrictEnd(e.target.checked)}
+                    />
+                </div>
+                </>
             )}
         </>
     )}
