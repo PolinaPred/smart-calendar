@@ -105,7 +105,11 @@ function expandRepeatingTasks(tasks){
 
 function insertFlexible(task, weekGrid){
     const durationMins = task.duration * 60;
+    const bufferBefore = task.bufferBefore || 0;
+    const bufferAfter = task.bufferAfter || 0;
     const now = new Date();
+
+    const slotCandidates = [];
 
     for (let i = 0; i < 7; i++){
         const testDate = new Date(now);
@@ -120,27 +124,61 @@ function insertFlexible(task, weekGrid){
             const day = DAYS[(testDate.getDay() + 6) % 7];
 
             if (hasSpace(weekGrid[day], testDate, task.duration, task.bufferBefore || 0, task.bufferAfter || 0)){
-                const bufferBefore = task.bufferBefore || 0;
-                const bufferAfter = task.bufferAfter || 0;
-
-                const rawStart = new Date(testDate);
-                const adjustedStart = addMinutes(rawStart, -bufferBefore);
-                const adjustedEnd = addMinutes(rawStart, task.duration * 60 + bufferAfter);
                 
-                //const end = addMinutes(testDate, task.duration * 60);
+                //const rawStart = new Date(testDate);
+                //const adjustedStart = addMinutes(rawStart, -bufferBefore);
+                //const adjustedEnd = addMinutes(rawStart, task.duration * 60 + bufferAfter);
+                
+                const score =
+                (7-i) * 1.5 + //earlier in the week = higher score
+                (22-totalHours(weekGrid[day])) * 0.75 + //distribute through the week
+                Math.random() * 0.2; //randomness component to prevent ties
+
+                slotCandidates.push({
+                    day,
+                    start: new Date(testDate),
+                    end: addMinutes(testDate, durationMins),
+                    rawStart: new Date(testDate),
+                    score
+                });
+
+                /*
                 weekGrid[day].push({
-                    start: adjustedStart.toISOString(), //addMinutes(testDate, -task.bufferBefore || 0).toISOString(),
-                    end: adjustedEnd.toISOString(), //addMinutes(end, task.bufferAfter || 0).toISOString(),
-                    rawStart: rawStart.toISOString(), //testDate.toISOString(),
-                    bufferBefore,//: task.bufferBefore || 0,
-                    bufferAfter,//: task.bufferAfter || 0,
+                    start: adjustedStart.toISOString(), 
+                    end: adjustedEnd.toISOString(),
+                    rawStart: rawStart.toISOString(), 
+                    bufferBefore,
+                    bufferAfter,
                     task
                 });
                 return;
+                */
             }
             testDate.setMinutes(testDate.getMinutes() + 15);
         }
     }
+    if(slotCandidates.length > 0){
+        const bestSlot = slotCandidates.sort((a, b) => b.score - a.score)[0];
+        const adjustedStart = addMinutes(bestSlot.start, -bufferBefore);
+        const adjustedEnd = addMinutes(bestSlot.end, task.duration * 60 + bufferAfter); //might need to change the bufferAfter
+
+        weekGrid[bestSlot.day].push({
+            start: adjustedStart.toISOString(), 
+            end: adjustedEnd.toISOString(),
+            rawStart: bestSlot.rawStart.toISOString(), 
+            bufferBefore,
+            bufferAfter,
+            task
+        });
+    }
+}
+
+function totalHours(slots){
+    return slots.reduce((sum, slot) =>{
+        const start = new Date(slot.start);
+        const end = new Date(slot.end);
+        return sum + (end - start) / (1000 * 60 * 60);
+    }, 0);
 }
 
 export function generateWeekSchedule(tasks) {
