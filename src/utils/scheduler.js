@@ -285,7 +285,7 @@ export function generateWeekSchedule(tasks) {
     const grid = initWeekGrid();
 
     const expandedTasks = expandRepeatingTasks(tasks);
-    const unlockedClones = [];
+    const groupedByOriginal = {};
     for (let task of expandedTasks){
         if(task.locked && task.scheduledAt){
             const date = new Date(task.scheduledAt);
@@ -305,14 +305,21 @@ export function generateWeekSchedule(tasks) {
                 bufferBefore,
                 bufferAfter
             });
-        } else {
-            unlockedClones.push(task);
+        }
+
+        if(!task.locked){
+            const key = task.originalId || task.id;
+            if (!groupedByOriginal[key]) groupedByOriginal[key] = [];
+            groupedByOriginal[key].push(task);
         }
     }
 
-    //const allGroups = Object.values(groupedByOriginal);
+    const allGroups = Object.values(groupedByOriginal);
 
-    unlockedClones.sort((a, b) => {
+    allGroups.sort((groupA, groupB) => {
+        const a = groupA[0];
+        const b = groupB[0];
+
         const aStrict = a.strictStart || a.strictEnd ? 1 : 0;
         const bStrict = b.strictStart || b.strictEnd ? 1 : 0;
 
@@ -325,55 +332,30 @@ export function generateWeekSchedule(tasks) {
         return bScore - aScore;
     });
 
-    const typeBuckets = {};
-    for (let task of unlockedClones){
-        const key = task.originalId || task.id;
-        if (!typeBuckets[key]) typeBuckets[key] = [];
-        typeBuckets[key].push(task);
-    }
+    for (const group of allGroups){
 
-    const interleaved = [];
-    let added;
-    do {
-        added = false;
-        for (let key of Object.keys(typeBuckets)){
-            const list = typeBuckets[key];
-            if(list.length > 0){
-                const i = Math.floor(Math.random() * list.length);
-                interleaved.push(list.splice(i, 1)[0]);
-                added = true;
-            }
-        }
-    } while (added);
-
-    const scheduledCount = {};
-
-    for (const clone of interleaved){
-        const key = getTaskKey(clone);
-        const maxPer = clone.maxPer;
-        const count = scheduledCount[key] || 0;
-
-        /*
         const baseTask = group[0];
         const maxPerValue = baseTask.maxPer?.value || null;
         const maxPerUnit = baseTask.maxPer?.unit || null;
         
         const internalOrder = [...group].sort(() => Math.random() - 0.5);
-        */
-       
-        if(clone.maxPer?.unit === 'week' && count >= clone.maxPer.value) continue;
-
+        
+        if(maxPerUnit === 'week'){
+            let inserted = 0;
+            for (const clone of internalOrder){
+            if(inserted >= maxPerValue) break;
             const beforeInsert = JSON.stringify(grid);
             insertFlexible(clone, grid);
             const afterInsert = JSON.stringify(grid);
             if(beforeInsert !== afterInsert){
-                scheduledCount[key] = (scheduledCount[key] || 0) +1;
+                inserted++;
             }
-        /*} else {
+            }
+        } else {
             for (const clone of internalOrder){
                 insertFlexible(clone, grid);
             }
-        }*/
+        }
     }
 
     for (const day of DAYS){
