@@ -10,6 +10,11 @@ export default function TaskForm({ onAdd }){
     const[repeatEveryUnit, setRepeatEveryUnit] = useState('week');
     const[repeatDay, setRepeatDay] = useState([]);
     const[notes, setNotes] = useState('');
+    const[deadline, setDeadline] = useState(false);
+    const[dueDate, setDueDate] = useState('');
+    const[maxPer, setMaxPer] = useState(false);
+    const[maxPerValue, setMaxPerValue] = useState(1);
+    const[maxPerUnit, setMaxPerUnit] = useState("day");
 
 const handleSubmit = (e) => {
     e.preventDefault();
@@ -22,14 +27,19 @@ const handleSubmit = (e) => {
         duration: parseFloat(duration),
         locked,
         repeating,
-        repeatEvery: repeating && locked == false
+        repeatEvery: repeating && !locked
             ? { value: repeatEveryValue, unit: repeatEveryUnit}
             : null,
-        repeatOn: repeating && locked == true
+        repeatOn: repeating && locked
             ? { day: repeatDay }
             : null,
         scheduledAt: locked ? scheduledAt : null,
         notes,
+        deadline,
+        dueDate: deadline ? dueDate : null,
+        maxPer: repeating && !locked && maxPer
+            ? {value: maxPerValue, unit: maxPerUnit}
+            : null
     };
 
     onAdd(task);
@@ -38,11 +48,16 @@ const handleSubmit = (e) => {
     setTitle('');
     setDuration('');
     setLocked(false);
-    setScheduledAt();
+    setScheduledAt('');
     setRepeating(false);
     setRepeatEveryValue(1);
     setRepeatEveryUnit('week');
     setNotes('');
+    setDeadline(false);
+    setDueDate('');
+    setMaxPer(false);
+    setMaxPerValue(1);
+    setMaxPerUnit('day');
 };
 
 return (
@@ -116,28 +131,57 @@ return (
     
     {repeating && (
             <>
-            {locked == false && (
+            {!locked && (
+                <>
                 <div className="form-row">
-                <label>Complete every:</label>
-                <input
-                    type="number"
-                    min="1"
-                    value={repeatEveryValue}
-                    onChange={e => setRepeatEveryValue(e.target.value)}
-                    style={{width: '4rem', marginRight: '0.5rem'}}
-                />
-                <select
-                    value={repeatEveryUnit}
-                    onChange={e => setRepeatEveryUnit(e.target.value)}
-                >
-                    <option value="day">Day(s)</option>
-                    <option value="week">Week(s)</option>
-                    <option value="month">Month(s)</option>
-                </select>
+                    <label>Minimum frequency - complete every:</label>
+                    <input
+                        type="number"
+                        min="1"
+                        value={repeatEveryValue}
+                        onChange={e => setRepeatEveryValue(e.target.value)}
+                        style={{width: '4rem', marginRight: '0.5rem'}}
+                    />
+                    <select
+                        value={repeatEveryUnit}
+                        onChange={e => setRepeatEveryUnit(e.target.value)}>
+                        <option value="day">Day(s)</option>
+                        <option value="week">Week(s)</option>
+                        <option value="month">Month(s)</option>
+                    </select>
                 </div>
+                <div className="form-row">
+                    <label>Does this task have a maximum frequency?</label>
+                        <input
+                            type="checkbox"
+                            checked={maxPer}
+                            onChange={e => setMaxPer(e.target.checked)}
+                        />
+                </div>
+                
+                {maxPer && (
+                    <div className="form-row">
+                        <label>Maximum frequency:</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={maxPerValue}
+                            onChange={e => setMaxPerValue(e.target.value)}
+                            style={{width: '4rem', marginRight: '0.5rem'}}
+                        />
+                        <select
+                            value={maxPerUnit}
+                            onChange={e => setMaxPerUnit(e.target.value)}>
+                            <option value="day">Day(s)</option>
+                            <option value="week">Week(s)</option>
+                            <option value="month">Month(s)</option>
+                        </select>
+                    </div>
+                )}
+            </>
             )}
 
-            {locked == true && (
+            {locked && (
                 <fieldset>
                     <legend>Repeat on:</legend>
                     {['Monday',"Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day =>(
@@ -163,6 +207,31 @@ return (
                 </fieldset>
             )}
             </>
+    )}
+
+    {!locked && (
+        <>
+            <div className="form-row">
+                <label>Does this task have a deadline?</label>
+                <input
+                    type="checkbox"
+                    checked={deadline}
+                    onChange={e => setDeadline(e.target.checked)}
+                />
+            </div>
+
+            {deadline == true && (
+                <div className="form-row">
+                    <label>Complete by:</label>
+                    <input
+                        type="datetime-local"
+                        value={dueDate}
+                        onChange={e => setDueDate(e.target.value)}
+                        step="60"
+                    />
+                </div>
+            )}
+        </>
     )}
     
     <div className="form-row">

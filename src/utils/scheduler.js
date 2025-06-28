@@ -110,6 +110,7 @@ function insertFlexible(task, weekGrid){
     const now = new Date();
 
     const slotCandidates = [];
+    const penaltyFactor = 0.5;
 
     for (let i = 0; i < 7; i++){
         const testDate = new Date(now);
@@ -123,16 +124,47 @@ function insertFlexible(task, weekGrid){
         while (testDate <= latestStart) {
             const day = DAYS[(testDate.getDay() + 6) % 7];
 
+            const existingSameTasks = weekGrid[day].filter(slot => slot.task.title === task.title);
+            
+            if(task.maxPer && task.maxPerUnit === 'week'){
+                const totalThisWeek = Object.values(weekGrid).flat()
+                        .filter(slot => slot.task.title === task.title).length;
+                if(totalThisWeek >= task.maxPerValue){
+                    testDate.setMinutes(testDate.getMinutes() + 15);
+                    continue;
+                }
+            }
+
+            const lastSameType = existingSameTasks.sort((a, b) => new Date(b.start) - new Date(a.start))[0];
+            if(lastSameType){
+                const gap = (testDate - new Date(lastSameType.start)) / (1000 * 60 * 60);
+                if (gap < 4) {
+                    testDate.setMinutes(testDate.getMinutes() + 15);
+                    continue;
+                }
+            }
+
+            if(task.deadline) {
+                const deadlineDate = new Date(task.dueDate);
+                const daysUntilDeadline = (deadlineDate - testDate) / (1000 * 60 * 60 *24);
+                
+                if(daysUntilDeadline < 0) {
+                    testDate.setMinutes(testDate.getMinutes() + 15);
+                    continue;
+                }
+            }
+
             if (hasSpace(weekGrid[day], testDate, task.duration, task.bufferBefore || 0, task.bufferAfter || 0)){
-                
-                //const rawStart = new Date(testDate);
-                //const adjustedStart = addMinutes(rawStart, -bufferBefore);
-                //const adjustedEnd = addMinutes(rawStart, task.duration * 60 + bufferAfter);
-                
-                const score =
-                (7-i) * 1.5 + //earlier in the week = higher score
-                (22-totalHours(weekGrid[day])) * 0.75 + //distribute through the week
-                Math.random() * 0.2; //randomness component to prevent ties
+ 
+                let score =
+                (7-i) * 1.5 + 
+                (22-totalHours(weekGrid[day])) * 0.75 + 
+                Math.random() * 0.2;
+
+                const sameTypeToday = weekGrid[day].filter(slot => slot.task.title === task.title).length;
+                score -= sameTypeToday * penaltyFactor;
+
+                score += Math.max(0, 5 - ((new Date(task.dueDate) - testDate) / (1000 * 60 * 60 * 24))); //boost earlier slots if deadline approaching
 
                 slotCandidates.push({
                     day,
@@ -141,18 +173,6 @@ function insertFlexible(task, weekGrid){
                     rawStart: new Date(testDate),
                     score
                 });
-
-                /*
-                weekGrid[day].push({
-                    start: adjustedStart.toISOString(), 
-                    end: adjustedEnd.toISOString(),
-                    rawStart: rawStart.toISOString(), 
-                    bufferBefore,
-                    bufferAfter,
-                    task
-                });
-                return;
-                */
             }
             testDate.setMinutes(testDate.getMinutes() + 15);
         }
