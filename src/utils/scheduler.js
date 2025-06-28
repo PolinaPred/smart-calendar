@@ -103,7 +103,13 @@ function expandRepeatingTasks(tasks){
     return expanded;
 }
 
+function getTaskKey(task){
+    return task.originalId || task.id;
+}
+
 function insertFlexible(task, weekGrid){
+    const maxPerUnit = task.maxPer?.unit || null;
+    const maxPerValue = task.maxPer?.value || null;
     const durationMins = task.duration * 60;
     const bufferBefore = task.bufferBefore || 0;
     const bufferAfter = task.bufferAfter || 0;
@@ -111,6 +117,21 @@ function insertFlexible(task, weekGrid){
 
     const slotCandidates = [];
     const penaltyFactor = 0.5;
+
+    const taskKey = getTaskKey(task);
+
+    if(task.maxPer && maxPerUnit === 'week'){
+        const scheduled = Object.values(weekGrid).flat().filter(slot => getTaskKey(slot.task) === taskKey).length;
+        if (scheduled >= maxPerValue) return;
+    }
+
+    const daysWithMaxAlready = new Set();
+    for (const day of DAYS){
+        const existing = weekGrid[day].filter(slot => getTaskKey(slot.task) === taskKey);
+        if (task.maxPer && maxPerUnit === 'day' && existing.length >= maxPerValue){
+            daysWithMaxAlready.add(day);
+        }
+    }
 
     for (let i = 0; i < 7; i++){
         const testDate = new Date(now);
@@ -124,14 +145,22 @@ function insertFlexible(task, weekGrid){
         while (testDate <= latestStart) {
             const day = DAYS[(testDate.getDay() + 6) % 7];
 
-            const existingSameTasks = weekGrid[day].filter(slot => slot.task.title === task.title);
-            
-            if(task.maxPer && task.maxPerUnit === 'week'){
-                const totalThisWeek = Object.values(weekGrid).flat()
-                        .filter(slot => slot.task.title === task.title).length;
-                if(totalThisWeek >= task.maxPerValue){
+            if(daysWithMaxAlready.has(day)){
+                testDate.setMinutes(testDate.getMinutes() + 15);
+                continue;
+            }
+
+            const existingSameDay = weekGrid[day].filter(slot => getTaskKey(slot.task) === taskKey);
+            const existingSameWeek = Object.values(weekGrid).flat().filter(slot => getTaskKey(slot.task) === taskKey);
+
+            if(task.maxPer){
+                if(maxPerUnit === 'day' && existingSameDay.length >= maxPerValue){
                     testDate.setMinutes(testDate.getMinutes() + 15);
                     continue;
+                }
+
+                if(maxPerUnit === 'week' && existingSameWeek.length >= maxPerValue){
+                    return;
                 }
             }
 
@@ -140,22 +169,28 @@ function insertFlexible(task, weekGrid){
             let preferredBoost = 0;
 
             if(task.prefStartTime != null && task.prefEndTime != null){
+                if(task.strictStart && hour < task.prefStartTime) {
+                    testDate.setMinutes(testDate.getMinutes() + 15);
+                    continue;
+                }
+                if(task.strictEnd && hour >= task.prefEndTime) {
+                    testDate.setMinutes(testDate.getMinutes() + 15);
+                    continue;
+                }
+                        const midpoint = (task.prefStartTime + task.prefEndTime) / 2;
+                        const distanceFromMid = Math.abs(hour - midpoint);
                     if(hour >= task.prefStartTime && hour < task.prefEndTime){
-                        preferredBoost = 3;
+                        preferredBoost = Math.max(0, 15 - distanceFromMid * 10);
                     } else {
-                        if(task.strictStart && hour < task.prefStartTime) {
-                    testDate.setMinutes(testDate.getMinutes() + 15);
-                    continue;
-                        }
-                        if(task.strictEnd && hour >= task.prefEndTime) {
-                    testDate.setMinutes(testDate.getMinutes() + 15);
-                    continue;
-                        }
-                        preferredBoost = -2;
+                        const outsideDistance = hour < task.prefStartTime
+                            ? task.prefEndTime - hour
+                            : hour - task.prefEndTime;
+                            
+                        preferredBoost -= outsideDistance * 10;
                     }
             }
 
-            const lastSameType = existingSameTasks.sort((a, b) => new Date(b.start) - new Date(a.start))[0];
+            const lastSameType = existingSameDay.sort((a, b) => new Date(b.start) - new Date(a.start))[0];
             if(lastSameType){
                 const gap = (testDate - new Date(lastSameType.start)) / (1000 * 60 * 60);
                 if (gap < 4) {
@@ -177,13 +212,30 @@ function insertFlexible(task, weekGrid){
             if (hasSpace(weekGrid[day], testDate, task.duration, task.bufferBefore || 0, task.bufferAfter || 0)){
  
                 let score =
-                (7-i) * 1.5 + 
+                (7-i) * 3 + 
                 (22-totalHours(weekGrid[day])) * 0.75 + 
-                Math.random() * 0.2 +
+                Math.random() * 0.1 +
                 preferredBoost +
                 earlyBird;
 
-                const sameTypeToday = weekGrid[day].filter(slot => slot.task.title === task.title).length;
+                if(task.repeating && task.repeatEvery && task.repeatEvery.unit === 'day'){
+                    const desiredGap = task.repeatEvery.value;
+                    const allSlots = Object.values(weekGrid).flat().filter(slot => getTaskKey(slot.task) === getTaskKey(task));
+                    
+                    for(let other of allSlots){
+                        const gapDays = Math.abs((testDate - new Date(other.start)) / (1000 * 60 * 60 * 24));
+                        const diffFromIdeal = Math.abs(gapDays - desiredGap);
+                        
+                        if(gapDays === desiredGap) {
+                            score += 2;    
+                        } else {
+                            const weight = gapDays < desiredGap ? 1.5 : 0.5;
+                            score -= Math.max(0, 3-diffFromIdeal) * weight;
+                        }
+                    }
+                }
+
+                const sameTypeToday = existingSameDay.length;
                 score -= sameTypeToday * penaltyFactor;
 
                 score += Math.max(0, 5 - ((new Date(task.dueDate) - testDate) / (1000 * 60 * 60 * 24))); //boost earlier slots if deadline approaching
@@ -203,6 +255,12 @@ function insertFlexible(task, weekGrid){
         const bestSlot = slotCandidates.sort((a, b) => b.score - a.score)[0];
         const adjustedStart = addMinutes(bestSlot.start, -bufferBefore);
         const adjustedEnd = addMinutes(bestSlot.end, task.duration * 60 + bufferAfter); //might need to change the bufferAfter
+
+        const existingThisDay = weekGrid[bestSlot.day].filter(slot => getTaskKey(slot.task) === getTaskKey(task));
+        const allThisWeek = Object.values(weekGrid).flat().filter(slot => getTaskKey(slot.task) === getTaskKey(task));
+
+        if(maxPerUnit === 'day' && existingThisDay.length >= maxPerValue) return;
+        if(maxPerUnit === 'week' && allThisWeek.length >= maxPerValue) return;
 
         weekGrid[bestSlot.day].push({
             start: adjustedStart.toISOString(), 
@@ -227,7 +285,7 @@ export function generateWeekSchedule(tasks) {
     const grid = initWeekGrid();
 
     const expandedTasks = expandRepeatingTasks(tasks);
-
+    const groupedByOriginal = {};
     for (let task of expandedTasks){
         if(task.locked && task.scheduledAt){
             const date = new Date(task.scheduledAt);
@@ -248,11 +306,55 @@ export function generateWeekSchedule(tasks) {
                 bufferAfter
             });
         }
+
+        if(!task.locked){
+            const key = task.originalId || task.id;
+            if (!groupedByOriginal[key]) groupedByOriginal[key] = [];
+            groupedByOriginal[key].push(task);
+        }
     }
 
-    for (let task of expandedTasks){
-        if(!task.locked){
-            insertFlexible(task, grid);
+    const allGroups = Object.values(groupedByOriginal);
+
+    allGroups.sort((groupA, groupB) => {
+        const a = groupA[0];
+        const b = groupB[0];
+
+        const aStrict = a.strictStart || a.strictEnd ? 1 : 0;
+        const bStrict = b.strictStart || b.strictEnd ? 1 : 0;
+
+        const aWindow = (a.prefEndTime ?? 24) - (a.prefStartTime ?? 0);
+        const bWindow = (b.prefEndTime ?? 24) - (b.prefStartTime ?? 0);
+
+        const aScore = aStrict * 100 + (24 - aWindow);
+        const bScore = bStrict * 100 + (24 - bWindow);
+
+        return bScore - aScore;
+    });
+
+    for (const group of allGroups){
+
+        const baseTask = group[0];
+        const maxPerValue = baseTask.maxPer?.value || null;
+        const maxPerUnit = baseTask.maxPer?.unit || null;
+        
+        const internalOrder = [...group].sort(() => Math.random() - 0.5);
+        
+        if(maxPerUnit === 'week'){
+            let inserted = 0;
+            for (const clone of internalOrder){
+            if(inserted >= maxPerValue) break;
+            const beforeInsert = JSON.stringify(grid);
+            insertFlexible(clone, grid);
+            const afterInsert = JSON.stringify(grid);
+            if(beforeInsert !== afterInsert){
+                inserted++;
+            }
+            }
+        } else {
+            for (const clone of internalOrder){
+                insertFlexible(clone, grid);
+            }
         }
     }
 
